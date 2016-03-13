@@ -95,12 +95,15 @@ void __fastcall TModuleThread::buildCommand()
 
 	TADODataSet *modDS = load("select * from module_config where port = " + IntToStr(portNum));
 	dcb.BaudRate = StrToInt(modDS->FieldByName("baud_rate")->AsString);
-	dcb.ByteSize=8;
-	dcb.Parity=NOPARITY;
-	dcb.StopBits=ONESTOPBIT;
-	if (SetCommState(hCom, &dcb) == false){
-		return ;
+	if (runMode != TEST_MODE) {
+		dcb.ByteSize=8;
+		dcb.Parity=NOPARITY;
+		dcb.StopBits=ONESTOPBIT;
+		if (SetCommState(hCom, &dcb) == false){
+			return ;
+		}
 	}
+
 	while (modDS->Eof == false){
 		String addrPara = modDS->FieldByName("addr")->AsString;
 
@@ -201,10 +204,12 @@ void __fastcall TModuleThread::saveResult(String id, String command, unsigned ch
 {
 	TADODataSet *modDS = load("select * from module_config where id = " + id);
 	TADODataSet *execDtl = load("select * from exec_detail where 1=2");
+	TADODataSet *gatherData = load("select * from gather_data where 1=2");
 	execDtl->Append();
 	execDtl->FieldByName("addr")->AsString = modDS->FieldByName("addr")->AsString;
 	execDtl->FieldByName("passive")->AsString = modDS->FieldByName("passive")->AsString;
 	execDtl->FieldByName("dac")->AsString = modDS->FieldByName("dac")->AsString;
+	execDtl->FieldByName("port")->AsString = modDS->FieldByName("port")->AsString;
 	execDtl->FieldByName("baud_para")->AsString = modDS->FieldByName("command_baud_rate")->AsString;
 	execDtl->FieldByName("log_id")->AsInteger = runId;
 	execDtl->FieldByName("command")->AsString = command;
@@ -221,8 +226,31 @@ void __fastcall TModuleThread::saveResult(String id, String command, unsigned ch
 		}
 	}
 	execDtl->Post();
+
+
+	gatherData->Append();
+	gatherData->FieldByName("detail_id")->AsInteger = execDtl->FieldByName("id")->AsInteger;
+	gatherData->FieldByName("value_type")->AsString = "Data";
+	gatherData->FieldByName("analyzer_data")->AsInteger = 0;
+	TStringList *value = new TStringList();
+	value->Delimiter = ' ';
+	value->DelimitedText = execDtl->FieldByName("result")->AsString;
+	for (int i= 0, j = 0; i < value->Count; i++, j++) {
+		if (i == 20 || i == 40) {
+			gatherData->Post();
+			gatherData->Append();
+			gatherData->FieldByName("detail_id")->AsInteger = execDtl->FieldByName("id")->AsInteger;
+			gatherData->FieldByName("value_type")->AsString = i==20?"DA":"IIC";
+			gatherData->FieldByName("analyzer_data")->AsInteger = 0;
+			j = 0;
+		}
+		gatherData->FieldByName("v" + IntToStr(10 + j))->AsString = (*value)[i];
+	}
+	gatherData->Post();
+
 	releaseDS(modDS);
 	releaseDS(execDtl);
+	releaseDS(gatherData);
 }
 
 

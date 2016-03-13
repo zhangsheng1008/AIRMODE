@@ -57,7 +57,7 @@ void __fastcall Tdm::DataModuleCreate(TObject *Sender)
 	   ShowMessage("Get SYS Name Error");
 	   return;
 	}
-	ShowMessage(hostName);
+
 	//this->dbConn->ConnectionString = "Provider=SQLNCLI11.1;Integrated Security=SSPI;Persist Security Info=False;User ID=\"\";Initial Catalog=airmode;Data Source=ZSLABTOP-PC\\SQLEXPRESS;Initial File Name=\"\";Server SPN=\"\"";
 	this->dbConn->ConnectionString = "Provider=SQLNCLI11.1;Integrated Security=SSPI;Persist Security Info=False;User ID=\"\";Initial Catalog=airmode;Data Source=" + String(hostName) + "\\SQLEXPRESS;Initial File Name=\"\";Server SPN=\"\"";
 	this->dbConn->Connected = true;

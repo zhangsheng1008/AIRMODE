@@ -204,22 +204,17 @@ String __fastcall sensibilityPara(String c){
     return cmd_part1 + cmd_part2;
 }
 
-void _fastcall queryDS(TADODataSet *ds, String sql){
-
-}
 
 String __fastcall analyzePPM(unsigned char *result, int groupNum, int resultSize){
 	String strRes = "" ;
+	if (resultSize == 141) {
+      resultSize = 121;  
+	}
 	for (int i = 0; i <= resultSize - groupNum; i=i+groupNum) {
 	   int vHigh = result[i];
 	   int vLow = result[i+1];
 	   float ppm = vHigh * 256 + vLow;
-	   if (i >= 40 && i < 80 && ppm != 0 && groupNum == 2) {
-		  ppm = ppm/1000;
-		  strRes = strRes + FormatFloat("##.###", ppm) + "  ";
-	   } else {
-		 strRes = strRes + FloatToStr(ppm) + "  ";
-	   }
+	   strRes = strRes + FloatToStr(ppm) + "  ";
 	}
 	return strRes;
 }
@@ -264,10 +259,26 @@ void __fastcall readPort(HANDLE hCom, unsigned char *result, unsigned int &resul
 	ClearCommError(hCom,  &lpErr, &comStat);
 	if (comStat.cbInQue > 4096 || comStat.cbInQue == 0) {
 		PurgeComm(hCom,PURGE_RXCLEAR);
-		ShowMessage("¶Ë¿Ú¶ÁÈ¡´íÎó");
-
+		result_size = 0;
+		return;
 	}
 	result_size = comStat.cbInQue;
 	ReadFile(hCom, result, comStat.cbInQue, &lpNumberOfBytesRead, NULL);
 
+}
+
+void __fastcall sendCmdToComPort(String portNum,
+								 int baudRate,
+								 unsigned char *command,
+								 unsigned int command_size,
+								 unsigned char *result,
+								 unsigned int &result_size)
+{
+	HANDLE hCom = openPort(portNum, baudRate);
+	if (command_size > 0) {
+	   writePort(hCom, command, command_size);
+	   Sleep(100);
+	}
+	readPort(hCom, result, result_size);
+    CloseHandle(hCom);
 }

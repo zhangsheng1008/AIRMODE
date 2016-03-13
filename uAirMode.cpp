@@ -32,7 +32,7 @@ void __fastcall TfmAirMode::btnStopClick(TObject *Sender)
 		 (*pr)->Terminate();
    }
 
-   subThreadList.clear();
+    subThreadList.clear();
 
 	dbnvMod->Enabled = true;
 	dcgMod->Enabled = true;
@@ -41,6 +41,8 @@ void __fastcall TfmAirMode::btnStopClick(TObject *Sender)
 	qryDetail->Active = false;
 	inQuery = false;
 	Timer1->Enabled = false;
+	inQuery2 = false;
+	Timer2->Enabled = false;
 }
 //---------------------------------------------------------------------------
 
@@ -54,16 +56,23 @@ void __fastcall TfmAirMode::btnRunClick(TObject *Sender)
 	btnRun->Enabled = false;
 	btnStop->Enabled = true;
 
+    dm->cmdClearAnalyzerData->Execute();
+
 	TStringList *ports = new TStringList();
+	tabResult->Tabs->Clear() ;
 	dm->tbAirModeMod->First();
 	while(dm->tbAirModeMod->Eof == false){
 		String port = dm->tbAirModeMod->FieldByName("port")->AsString;
 		if (ports->IndexOf(port) == -1) ports->Add(port);
 		dm->tbAirModeMod->Next();
+		tabResult->Tabs->Append(port + "," + dm->tbAirModeMod->FieldByName("addr")->AsString);
 	}
 
 
-	runId = 0;
+	dm->execLog->Append();
+	dm->execLog->FieldByName("execute_time")->AsDateTime = Now();
+	dm->execLog->Post() ;
+	runId = dm->execLog->FieldByName("id")->AsInteger;
 	runMode = 0;
 	if (cbRunMode->Checked == true) {
         runMode = 1;
@@ -76,10 +85,12 @@ void __fastcall TfmAirMode::btnRunClick(TObject *Sender)
 	}
 	delete ports;
 	qryDetail->Parameters->ParamByName("logid")->Value = runId;
-	qryAnalyzer->Parameters->ParamByName("logid")->Value = runId;
 	qryDetail->Active = true;
+	tabResultChange(this->tabResult);
 	inQuery = false;
+	inQuery2 = false;
 	Timer1->Enabled = true;
+	Timer2->Enabled = true;
 }
 //---------------------------------------------------------------------------
 
@@ -90,7 +101,7 @@ void __fastcall TfmAirMode::Timer1Timer(TObject *Sender)
 		inQuery = true;
 		qryDetail->Requery() ;
 		qryDetail->Last() ;
-		if (chkAnalyzer->Checked) readAnalyze();
+
 		inQuery = false;
 	}
 
@@ -106,42 +117,114 @@ void __fastcall TfmAirMode::Button2Click(TObject *Sender)
 //---------------------------------------------------------------------------
 
 
-bool __fastcall TfmAirMode::readAnalyze()
+bool __fastcall TfmAirMode::readOtherInfo()
 {
 	int tryTimes = 5;
 	int iTimes = 0;
-	TADODataSet *ds = dm->query("select * from sys_config where code = 'ANALYZER'");
-	String port = ds->FieldByName("value_1")->AsString;
-	String baud_rate =  ds->FieldByName("value_2")->AsString;
-	ds->Close();
-
-	ds = dm->query("select * from sys_config where code = 'ANALYZER_RES_TPL'");
-	String resTpl = ds->FieldByName("value_1")->AsString;
-	ds->Close();
-
-	HANDLE hCom = openPort(port, StrToInt(baud_rate));
-
-	unsigned int result_size;
+	unsigned int result_size = 0;
 	unsigned char result[4096];
-	while(result_size == 0 && iTimes < tryTimes){
-		readPort(hCom, result, result_size);
-		iTimes++;
+	String command;
+	String resTpl;
+	HANDLE hCom;
+	String result_str;
+	String port;
+	String baud_rate;
+	TADODataSet *otherDataDS = dm->query("select * from analyzer_data");
+	otherDataDS->Append();
+
+	if (chkAnalyzer->Checked){
+		TADODataSet *ds = dm->query("select * from sys_config where code = 'ANALYZER'");
+		port = ds->FieldByName("value_1")->AsString;
+		baud_rate =  ds->FieldByName("value_2")->AsString;
+		ds->Close();
+
+		ds = dm->query("select * from sys_config where code = 'ANALYZER_RES_TPL'");
+		resTpl = ds->FieldByName("value_1")->AsString;
+		ds->Close();
+
+		hCom = openPort(port, StrToInt(baud_rate));
+
+		while(result_size == 0 && iTimes < tryTimes){
+			readPort(hCom, result, result_size);
+			iTimes++;
+			Sleep(500);
+		}
+		for (unsigned int i = 0;i < result_size && result_size <= 4096; i++) {
+		   result_str = result_str + (char)(result[i]);
+		}
+		TStrings *s = regexMap(result_str, resTpl);
+		CloseHandle(hCom);
+		otherDataDS->FieldByName("analyzer_return_info")->AsString = result_str;
+		otherDataDS->FieldByName("analyzer_data")->AsString = Trim(s->Text);
+		analyzerData = StrToFloat(otherDataDS->FieldByName("analyzer_data")->AsString);
+		delete s;
 	}
 
-	String result_str = "";
-	for (unsigned int i = 0;i < result_size && result_size <= 4096; i++) {
-	   result_str = result_str + (char)(result[i]);
+	if (chkPress->Checked){
+		TADODataSet *ds = dm->query("select * from sys_config where code = 'PRESSURE'");
+		port = ds->FieldByName("value_1")->AsString;
+		baud_rate =  ds->FieldByName("value_2")->AsString;
+		ds->Close();
+
+		ds = dm->query("select * from sys_config where code = 'PRESSURE_CMD'");
+		command = ds->FieldByName("value_1")->AsString;
+		resTpl = ds->FieldByName("value_2")->AsString;
+		ds->Close();
+		unsigned int pressCmdLen;
+		unsigned char *pressCmd = convertHexCommand(command, &pressCmdLen);
+		result_size = 0;
+		tryTimes = 0;
+		for (int i = 0; i < result_size; i++) {
+           result[i] = 0;
+		}
+		while(result_size == 0 && iTimes < tryTimes){
+			sendCmdToComPort(port, StrToInt(baud_rate), pressCmd, pressCmdLen, result, result_size);
+			iTimes++;
+		}
+
+		for (unsigned int i = 0;i < result_size && result_size <= 4096; i++) {
+		   result_str = result_str + (char)(result[i]);
+		}
+		TStrings *pressRes = regexMap(result_str, resTpl);
+
+		otherDataDS->FieldByName("pressure_return_info")->AsString = result_str;
+		otherDataDS->FieldByName("pressure_data")->AsString = pressRes->Text;
+		delete pressRes;
 	}
 
-	TStrings *s = regexMap(result_str, resTpl);
+	if (chkTemp->Checked){
+		TADODataSet *ds = dm->query("select * from sys_config where code = 'TEMP'");
+		port = ds->FieldByName("value_1")->AsString;
+		baud_rate =  ds->FieldByName("value_2")->AsString;
+		ds->Close();
 
-	CloseHandle(hCom);
+		result_size = 0;
+		tryTimes = 0;
+		for (int i = 0; i < result_size; i++) {
+           result[i] = 0;
+		}
+		while(result_size == 0 && iTimes < tryTimes){
+			sendCmdToComPort(port, StrToInt(baud_rate), NULL, 0, result, result_size);
+			iTimes++;
+			Sleep(500);
+		}
+		if (result_size > 0) {
+			for (unsigned int i = 0;i < result_size && result_size <= 4096; i++) {
+			   result_str = result_str + (char)(result[i]);
+			}
+			TStrings *pressRes = regexMap(result_str, resTpl);
+			otherDataDS->FieldByName("temp_return_info")->AsString = result_str;
+			otherDataDS->FieldByName("temp_data")->AsString = Trim(pressRes->Text);
+			otherDataDS->FieldByName("humi_data")->AsString = Trim(pressRes->Text);
+			delete pressRes;
+		}
 
+	}
 
-
-	delete s;
+	otherDataDS->Post();
+	otherDataDS->Close();
 	if (qryAnalyzer->Active == false) qryAnalyzer->Open();
-    qryAnalyzer->Requery() ;
+	qryAnalyzer->Requery() ;
 	return true;
 }
 
@@ -152,6 +235,7 @@ void __fastcall TfmAirMode::btnEEPromClick(TObject *Sender)
 	if (cbRunMode->Checked == true) {
         runMode = 1;
 	}
+	dm->cmdClearEEProm->Execute();
 	String commandPara[3];
 	dbcgEEProm->Refresh();
 	TADODataSet *modConfig = dm->query("select * from module_config ");
@@ -172,7 +256,10 @@ void __fastcall TfmAirMode::btnEEPromClick(TObject *Sender)
 		String baudRate = modConfig->FieldByName("baud_rate")->AsString;
 		HANDLE hCom;
 		if (runMode == 0) {
-          hCom = openPort(port, StrToInt(baudRate));
+		  hCom = openPort(port, StrToInt(baudRate));
+		  if (hCom == NULL) {
+             return; 
+		  }
 		}
 
 
@@ -241,8 +328,6 @@ void __fastcall TfmAirMode::readModNo()
 	cmdConfig->Close();
 	modConfig->First();
 
-
-
 	while(modConfig->Eof == false){
 		String addr = modConfig->FieldByName("addr")->AsString;
 		String port = modConfig->FieldByName("port")->AsString;
@@ -251,7 +336,6 @@ void __fastcall TfmAirMode::readModNo()
 		if (runMode == 0) {
           hCom = openPort(port, StrToInt(baudRate));
 		}
-
 
 		commandPara[0] = addr;
 
@@ -297,3 +381,28 @@ void __fastcall TfmAirMode::readModNo()
 
 
 }
+
+
+
+void __fastcall TfmAirMode::tabResultChange(TObject *Sender)
+{
+	if (tabResult->TabIndex >= 0){
+		TStringList *s = new TStringList();
+		s->DelimitedText = (*(tabResult->Tabs))[tabResult->TabIndex];
+		qryDetail->Filter = "port=" + (*s)[0] + " and addr=" + (*s)[1];
+		delete s;
+		qryDetail->Filtered = true;
+	}
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfmAirMode::Timer2Timer(TObject *Sender)
+{
+	if (inQuery2 == false) {
+		if (chkAnalyzer->Checked || chkTemp->Checked || chkPress->Checked) readOtherInfo();
+		inQuery2 = true;
+	}
+}
+//---------------------------------------------------------------------------
+
+

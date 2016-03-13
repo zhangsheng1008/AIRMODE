@@ -74,12 +74,30 @@ object dm: Tdm
     Left = 688
     Top = 320
   end
-  object CmdEEPromClear: TADOCommand
+  object cmdClearEEProm: TADOCommand
     CommandText = 'delete from eeprom_data;'
     Connection = dbConn
     Prepared = True
     Parameters = <>
     Left = 240
     Top = 312
+  end
+  object tbModNo: TADOTable
+    Connection = dbConn
+    TableName = 'module_no'
+    Left = 424
+    Top = 312
+  end
+  object ADOTable1: TADOTable
+    Left = 440
+    Top = 256
+  end
+  object cmdClearAnalyzerData: TADOCommand
+    CommandText = 'delete from analyzer_data;'
+    Connection = dbConn
+    Prepared = True
+    Parameters = <>
+    Left = 240
+    Top = 392
   end
 end

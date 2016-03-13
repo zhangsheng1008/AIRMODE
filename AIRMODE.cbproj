@@ -62,6 +62,23 @@
 			<ILINK_TranslatedLibraryPath>$(BDS)\lib\$(LANGDIR)\release;$(ILINK_TranslatedLibraryPath)</ILINK_TranslatedLibraryPath>
 		</PropertyGroup>
 		<ItemGroup>
+			<CppCompile Include="util.cpp">
+				<DependentOn>util.h</DependentOn>
+				<BuildOrder>6</BuildOrder>
+			</CppCompile>
+			<ResFiles Include="AIRMODE.res">
+				<BuildOrder>1</BuildOrder>
+			</ResFiles>
+			<CppCompile Include="action.cpp">
+				<DependentOn>action.h</DependentOn>
+				<BuildOrder>6</BuildOrder>
+			</CppCompile>
+			<CppCompile Include="uDM.cpp">
+				<Form>dm</Form>
+				<DesignClass>TDataModule</DesignClass>
+				<DependentOn>uDM.h</DependentOn>
+				<BuildOrder>7</BuildOrder>
+			</CppCompile>
 			<CppCompile Include="AIRMODE.cpp">
 				<BuildOrder>0</BuildOrder>
 			</CppCompile>
@@ -75,26 +92,9 @@
 				<DependentOn>uConfig.h</DependentOn>
 				<BuildOrder>5</BuildOrder>
 			</CppCompile>
-			<CppCompile Include="uDM.cpp">
-				<Form>dm</Form>
-				<DesignClass>TDataModule</DesignClass>
-				<DependentOn>uDM.h</DependentOn>
-				<BuildOrder>7</BuildOrder>
-			</CppCompile>
-			<CppCompile Include="util.cpp">
-				<DependentOn>util.h</DependentOn>
-				<BuildOrder>6</BuildOrder>
-			</CppCompile>
-			<ResFiles Include="AIRMODE.res">
-				<BuildOrder>1</BuildOrder>
-			</ResFiles>
-			<CppCompile Include="action.cpp">
-				<DependentOn>action.h</DependentOn>
-				<BuildOrder>6</BuildOrder>
-			</CppCompile>
+			<FormResources Include="uDM.dfm"/>
 			<FormResources Include="uAirMode.dfm"/>
 			<FormResources Include="uConfig.dfm"/>
-			<FormResources Include="uDM.dfm"/>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>

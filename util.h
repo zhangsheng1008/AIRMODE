@@ -36,9 +36,14 @@ unsigned char* flowHexPara(float flow);
 float convertFlowValue(unsigned char* buf);
 String __fastcall sensibilityPara(String c);
 TComponent* __fastcall getComponentByName(TForm* form, String name);
-void _fastcall queryDS(TADODataSet *ds, String sql);
 String __fastcall analyzePPM(unsigned char *result, int groupNum, int resultSize);
 HANDLE __fastcall openPort(String portNum, int baudRate);
 void __fastcall writePort(HANDLE hCom, unsigned char *command, unsigned int len);
 void __fastcall readPort(HANDLE hCom, unsigned char *result, unsigned int &result_size);
+void __fastcall sendCmdToComPort(String portNum,
+								 int baudRate,
+								 unsigned char *command,
+								 unsigned int command_size,
+								 unsigned char *result,
+								 unsigned int &result_size);
 #endif

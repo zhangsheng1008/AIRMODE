@@ -30,25 +30,56 @@ object dm: Tdm
   object tbSysConfig: TADOTable
     Connection = dbConn
     TableName = 'sys_config'
-    Left = 624
-    Top = 168
+    Left = 760
+    Top = 16
   end
   object dsSysConfig: TDataSource
     DataSet = tbSysConfig
-    Left = 632
-    Top = 232
+    Left = 760
+    Top = 80
   end
   object execLog: TADOTable
     Connection = dbConn
     CursorType = ctStatic
     Filter = '1=2'
     TableName = 'exec_log'
-    Left = 320
-    Top = 264
+    Left = 248
+    Top = 16
   end
   object dsLog: TDataSource
     DataSet = execLog
-    Left = 328
-    Top = 344
+    Left = 248
+    Top = 88
+  end
+  object tbEEProm: TADOTable
+    Connection = dbConn
+    CursorType = ctStatic
+    TableName = 'eeprom_data'
+    Left = 616
+    Top = 232
+  end
+  object tbAnalyzer: TADOTable
+    Connection = dbConn
+    TableName = 'analyzer_data'
+    Left = 608
+    Top = 320
+  end
+  object dsEEProm: TDataSource
+    DataSet = tbEEProm
+    Left = 680
+    Top = 240
+  end
+  object dsAnalyzer: TDataSource
+    DataSet = tbAnalyzer
+    Left = 688
+    Top = 320
+  end
+  object CmdEEPromClear: TADOCommand
+    CommandText = 'delete from eeprom_data;'
+    Connection = dbConn
+    Prepared = True
+    Parameters = <>
+    Left = 240
+    Top = 312
   end
 end

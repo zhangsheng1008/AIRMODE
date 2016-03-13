@@ -27,6 +27,7 @@ __fastcall TModuleThread::TModuleThread(int runid, int port, int interval, int m
 	sendCmdList = new TStringList();
 	recieveCmdList = new TStringList();
 	idList = new TStringList();
+	FreeOnTerminate = true;
 }
 //---------------------------------------------------------------------------
 void __fastcall TModuleThread::Execute()
@@ -79,8 +80,9 @@ TADODataSet* __fastcall TModuleThread::load(String sql)
 		}
 		throw new Sysutils::Exception("non idle ds can use");
 	} catch (Sysutils::Exception &e){
+    	return NULL;
 	} catch (...){
-
+		return NULL;
 	}
 
 
@@ -88,14 +90,24 @@ TADODataSet* __fastcall TModuleThread::load(String sql)
 //---------------------------------------------------------------------------
 void __fastcall TModuleThread::buildCommand()
 {
+
+
+
 	TADODataSet *modDS = load("select * from module_config where port = " + IntToStr(portNum));
+	dcb.BaudRate = StrToInt(modDS->FieldByName("baud_rate")->AsString);
+	dcb.ByteSize=8;
+	dcb.Parity=NOPARITY;
+	dcb.StopBits=ONESTOPBIT;
+	if (SetCommState(hCom, &dcb) == false){
+		return ;
+	}
 	while (modDS->Eof == false){
 		String addrPara = modDS->FieldByName("addr")->AsString;
 
 		TADODataSet *baudParaConfig = load("select value_2 from sys_config where code = 'baudrate_para' and value_1 = '" + modDS->FieldByName("command_baud_rate")->AsString + "'");
 		String baudPara =  baudParaConfig->FieldByName("value_2")->AsString;
 		releaseDS(baudParaConfig);
-		String commandCode = "CMD_";
+		commandCode = "CMD_";
 		if (modDS->FieldByName("passive")->AsBoolean == true)
 		   commandCode = commandCode + "ACTIVE";
 		else
@@ -143,7 +155,9 @@ void __fastcall TModuleThread::send()
 int __fastcall TModuleThread::recieve()
 {
 
+
 	for (int i = 0; i < recieveCmdList->Count; i++) {
+    	Sleep(1000* ivl);
 		DWORD result_size ;
 		unsigned char result[4096];
 		if (runMode != TEST_MODE) {
@@ -152,6 +166,7 @@ int __fastcall TModuleThread::recieve()
 			DWORD lpNumberOfBytesWritten;
 			PurgeComm(hCom,PURGE_TXABORT | PURGE_RXABORT | PURGE_TXCLEAR | PURGE_RXCLEAR);
 			WriteFile(hCom, command, len, &lpNumberOfBytesWritten, NULL);
+			Sleep(1000* ivl);
 			DWORD lpErr ,lpNumberOfBytesRead;
 			COMSTAT comStat;
 			ClearCommError(hCom,  &lpErr, &comStat);
@@ -179,14 +194,6 @@ int __fastcall TModuleThread::openComPort(){
 	}
 
 	GetCommState(hCom, &dcb);
-	dcb.ByteSize=8;
-	dcb.Parity=NOPARITY;
-	dcb.StopBits=ONESTOPBIT;
-	if (SetCommState(hCom, &dcb) == false){
-		CloseHandle(hCom);
-		return ERR_SET_PORT;
-
-	}
 	return RESULT_SUCC;
 }
 //---------------------------------------------------------------------------
@@ -202,11 +209,20 @@ void __fastcall TModuleThread::saveResult(String id, String command, unsigned ch
 	execDtl->FieldByName("log_id")->AsInteger = runId;
 	execDtl->FieldByName("command")->AsString = command;
 	if (runMode != TEST_MODE) {
-		execDtl->FieldByName("result_info")->AsString = convertHexResult(result, result_size);
-		int groupNum = 3;
-		if (execDtl->FieldByName("dac")->AsBoolean == true) groupNum = 2;
+		execDtl->FieldByName("return_info")->AsString = convertHexResult(result, result_size);
+		if (commandCode.Pos("EEPORM") > 0) {
+
+		} else {
+			int groupNum = 3;
+			if (commandCode.Pos("DAC") > 0) {
+			   groupNum = 2;
+			}
+			execDtl->FieldByName("result")->AsString = analyzePPM(&result[0], groupNum, result_size);
+		}
 	}
-    execDtl->Post();
+	execDtl->Post();
 	releaseDS(modDS);
 	releaseDS(execDtl);
 }
+
+

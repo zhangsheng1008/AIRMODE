@@ -51,13 +51,22 @@ TADODataSet* __fastcall  Tdm::query(String sql)
 
 void __fastcall Tdm::DataModuleCreate(TObject *Sender)
 {
+	char hostName[300];
+	unsigned long len = 300;
+	if (GetComputerName(hostName, &len) == false){
+	   ShowMessage("Get SYS Name Error");
+	   return;
+	}
+	ShowMessage(hostName);
 	//this->dbConn->ConnectionString = "Provider=SQLNCLI11.1;Integrated Security=SSPI;Persist Security Info=False;User ID=\"\";Initial Catalog=airmode;Data Source=ZSLABTOP-PC\\SQLEXPRESS;Initial File Name=\"\";Server SPN=\"\"";
-	this->dbConn->ConnectionString = "Provider=SQLNCLI11.1;Integrated Security=SSPI;Persist Security Info=False;User ID=\"\";Initial Catalog=airmode;Data Source=zhangyuanjie\\SQLEXPRESS;Initial File Name=\"\";Server SPN=\"\"";
+	this->dbConn->ConnectionString = "Provider=SQLNCLI11.1;Integrated Security=SSPI;Persist Security Info=False;User ID=\"\";Initial Catalog=airmode;Data Source=" + String(hostName) + "\\SQLEXPRESS;Initial File Name=\"\";Server SPN=\"\"";
 	this->dbConn->Connected = true;
 
 	tbAirModeMod->Active = true;
 	tbSysConfig->Active = true;
-    execLog->Active = true;
+	execLog->Active = true;
+	tbEEProm->Active = true;
+	tbAnalyzer->Active = true;
 }
 //---------------------------------------------------------------------------
 

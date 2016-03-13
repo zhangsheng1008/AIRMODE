@@ -205,19 +205,69 @@ String __fastcall sensibilityPara(String c){
 }
 
 void _fastcall queryDS(TADODataSet *ds, String sql){
-	ds->Connection = dm->dbConn;
-	ds->CommandText = sql;
-	if (ds->Active == true) {
-		ds->ClearFields();
-		ds->Close();
-	}
 
-	ds->Open();
-	ds->First();
 }
 
 String __fastcall analyzePPM(unsigned char *result, int groupNum, int resultSize){
-	for (int i = 0; i < resultSize; i=i+groupNum) {
+	String strRes = "" ;
+	for (int i = 0; i <= resultSize - groupNum; i=i+groupNum) {
+	   int vHigh = result[i];
+	   int vLow = result[i+1];
+	   float ppm = vHigh * 256 + vLow;
+	   if (i >= 40 && i < 80 && ppm != 0 && groupNum == 2) {
+		  ppm = ppm/1000;
+		  strRes = strRes + FormatFloat("##.###", ppm) + "  ";
+	   } else {
+		 strRes = strRes + FloatToStr(ppm) + "  ";
+	   }
+	}
+	return strRes;
+}
+
+HANDLE __fastcall openPort(String portNum, int baudRate)
+{
+	String port = "\\\\.\\COM" +  Trim(portNum);
+	HANDLE hCom = CreateFile(port.t_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, 0);
+	if (hCom == INVALID_HANDLE_VALUE) {
+		ShowMessage("打开端口错误, 端口号:" + portNum);
+		return NULL;
+	}
+	DCB dcb;
+	GetCommState(hCom, &dcb);
+	dcb.BaudRate = baudRate;
+	dcb.ByteSize=8;
+	dcb.Parity=NOPARITY;
+	dcb.StopBits=ONESTOPBIT;
+	if (SetCommState(hCom, &dcb) == false){
+		CloseHandle(hCom);
+		ShowMessage("设置端口错误, 端口号:" + portNum);
+		return NULL;
+	}
+	DWORD lpErr ,lpNumberOfBytesRead;
+	COMSTAT comStat;
+	ClearCommError(hCom,  &lpErr, &comStat);
+	return hCom;
+}
+
+void __fastcall writePort(HANDLE hCom, unsigned char *command, unsigned int len)
+{
+	DWORD lpNumberOfBytesWritten;
+	PurgeComm(hCom,PURGE_TXABORT | PURGE_RXABORT | PURGE_TXCLEAR | PURGE_RXCLEAR);
+	WriteFile(hCom, command, len, &lpNumberOfBytesWritten, NULL);
+}
+
+
+void __fastcall readPort(HANDLE hCom, unsigned char *result, unsigned int &result_size)
+{
+	DWORD lpErr ,lpNumberOfBytesRead;
+	COMSTAT comStat;
+	ClearCommError(hCom,  &lpErr, &comStat);
+	if (comStat.cbInQue > 4096 || comStat.cbInQue == 0) {
+		PurgeComm(hCom,PURGE_RXCLEAR);
+		ShowMessage("端口读取错误");
 
 	}
+	result_size = comStat.cbInQue;
+	ReadFile(hCom, result, comStat.cbInQue, &lpNumberOfBytesRead, NULL);
+
 }

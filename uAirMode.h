@@ -51,14 +51,30 @@ __published:	// IDE-managed Components
 	TADOQuery *qryDetail;
 	TDBGrid *DBGrid2;
 	TCheckBox *cbRunMode;
+	TButton *Button2;
+	TTabSheet *TabSheet3;
+	TDBCtrlGrid *dbcgEEProm;
+	TDBMemo *DBMemo1;
+	TDBMemo *DBMemo2;
+	TDBText *DBText1;
+	TButton *btnEEProm;
+	TDBMemo *DBMemo3;
+	TDBGrid *DBGrid3;
+	TADOQuery *qryAnalyzer;
+	TCheckBox *chkAnalyzer;
 	void __fastcall Button1Click(TObject *Sender);
 	void __fastcall btnStopClick(TObject *Sender);
 	void __fastcall btnRunClick(TObject *Sender);
 	void __fastcall Timer1Timer(TObject *Sender);
+	void __fastcall Button2Click(TObject *Sender);
+	void __fastcall btnEEPromClick(TObject *Sender);
 private:	// User declarations
-		int runId;
-		TSubThreadList subThreadList;
-		bool inQuery;
+	int runId;
+	int runMode;
+	TSubThreadList subThreadList;
+	bool inQuery;
+	bool __fastcall readAnalyze() ;
+	void __fastcall readModNo();
 public:		// User declarations
 	__fastcall TfmAirMode(TComponent* Owner);
 };

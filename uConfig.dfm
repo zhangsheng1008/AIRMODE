@@ -14,10 +14,11 @@ object fmSysConfig: TfmSysConfig
   PixelsPerInch = 96
   TextHeight = 13
   object DBGrid1: TDBGrid
-    Left = 8
-    Top = 31
-    Width = 861
-    Height = 442
+    Left = 0
+    Top = 33
+    Width = 877
+    Height = 450
+    Align = alClient
     DataSource = dm.dsSysConfig
     TabOrder = 0
     TitleFont.Charset = DEFAULT_CHARSET
@@ -26,12 +27,20 @@ object fmSysConfig: TfmSysConfig
     TitleFont.Name = 'Tahoma'
     TitleFont.Style = []
   end
-  object DBNavigator1: TDBNavigator
-    Left = 8
+  object Panel1: TPanel
+    Left = 0
     Top = 0
-    Width = 240
-    Height = 25
-    DataSource = dm.dsSysConfig
+    Width = 877
+    Height = 33
+    Align = alTop
     TabOrder = 1
+    object DBNavigator1: TDBNavigator
+      Left = 0
+      Top = 0
+      Width = 240
+      Height = 25
+      DataSource = dm.dsSysConfig
+      TabOrder = 0
+    end
   end
 end

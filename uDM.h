@@ -23,6 +23,11 @@ __published:	// IDE-managed Components
 	TDataSource *dsSysConfig;
 	TADOTable *execLog;
 	TDataSource *dsLog;
+	TADOTable *tbEEProm;
+	TADOTable *tbAnalyzer;
+	TDataSource *dsEEProm;
+	TDataSource *dsAnalyzer;
+	TADOCommand *CmdEEPromClear;
 	void __fastcall DataModuleCreate(TObject *Sender);
 private:	// User declarations
 	TADODataSet* dsPool[50];

@@ -217,6 +217,24 @@ object fmAirMode: TfmAirMode
         State = cbChecked
         TabOrder = 6
       end
+      object Button2: TButton
+        Left = 1080
+        Top = 440
+        Width = 75
+        Height = 25
+        Caption = 'Button2'
+        TabOrder = 7
+        Visible = False
+        OnClick = Button2Click
+      end
+      object chkAnalyzer: TCheckBox
+        Left = 1080
+        Top = 136
+        Width = 97
+        Height = 17
+        Caption = #36830#25509#20998#26512#20202
+        TabOrder = 8
+      end
     end
     object TabSheet2: TTabSheet
       Caption = #25968#25454
@@ -227,7 +245,6 @@ object fmAirMode: TfmAirMode
         Width = 161
         Height = 560
         Align = alLeft
-        DataSource = dm.dsLog
         TabOrder = 0
         TitleFont.Charset = DEFAULT_CHARSET
         TitleFont.Color = clWindowText
@@ -246,15 +263,29 @@ object fmAirMode: TfmAirMode
           Left = 1
           Top = 1
           Width = 987
-          Height = 48
+          Height = 176
           Align = alTop
           TabOrder = 0
+          object DBGrid3: TDBGrid
+            Left = 1
+            Top = 1
+            Width = 985
+            Height = 174
+            Align = alClient
+            DataSource = dm.dsOtherInfo
+            TabOrder = 0
+            TitleFont.Charset = DEFAULT_CHARSET
+            TitleFont.Color = clWindowText
+            TitleFont.Height = -11
+            TitleFont.Name = 'Tahoma'
+            TitleFont.Style = []
+          end
         end
         object DBGrid2: TDBGrid
           Left = 1
-          Top = 49
+          Top = 177
           Width = 987
-          Height = 510
+          Height = 382
           Align = alClient
           DataSource = dsDetail
           TabOrder = 1
@@ -264,6 +295,67 @@ object fmAirMode: TfmAirMode
           TitleFont.Name = 'Tahoma'
           TitleFont.Style = []
         end
+      end
+    end
+    object TabSheet3: TTabSheet
+      Caption = 'EEPROM'
+      ImageIndex = 2
+      object dbcgEEProm: TDBCtrlGrid
+        Left = 16
+        Top = 47
+        Width = 1009
+        Height = 466
+        AllowDelete = False
+        AllowInsert = False
+        DataSource = dm.dsEEProm
+        PanelHeight = 466
+        PanelWidth = 992
+        TabOrder = 0
+        RowCount = 1
+        object DBText1: TDBText
+          Left = 32
+          Top = 40
+          Width = 65
+          Height = 17
+          DataField = 'addr'
+          DataSource = dm.dsEEProm
+        end
+        object DBMemo1: TDBMemo
+          Left = 416
+          Top = 8
+          Width = 377
+          Height = 433
+          DataField = 'return_info'
+          DataSource = dm.dsEEProm
+          TabOrder = 0
+        end
+        object DBMemo2: TDBMemo
+          Left = 799
+          Top = 8
+          Width = 186
+          Height = 433
+          DataField = 'result'
+          DataSource = dm.dsEEProm
+          TabOrder = 1
+        end
+        object DBMemo3: TDBMemo
+          Left = 184
+          Top = 8
+          Width = 226
+          Height = 433
+          DataField = 'command'
+          DataSource = dm.dsEEProm
+          TabOrder = 2
+        end
+      end
+      object btnEEProm: TButton
+        Left = 16
+        Top = 16
+        Width = 97
+        Height = 25
+        Caption = #35835#21462'EEPRom'
+        TabOrder = 1
+        OnClick = btnEEPromClick
       end
     end
   end
@@ -279,7 +371,6 @@ object fmAirMode: TfmAirMode
     Top = 136
   end
   object qryDetail: TADOQuery
-    Connection = dm.dbConn
     Parameters = <
       item
         Name = 'logid'
@@ -293,5 +384,20 @@ object fmAirMode: TfmAirMode
       'select * from exec_detail where log_id = :logid')
     Left = 416
     Top = 112
+  end
+  object qryAnalyzer: TADOQuery
+    Parameters = <
+      item
+        Name = 'logid'
+        Attributes = [paSigned, paNullable]
+        DataType = ftInteger
+        Precision = 10
+        Size = 4
+        Value = Null
+      end>
+    SQL.Strings = (
+      'select * from analyzer_data where log_id = :logid')
+    Left = 472
+    Top = 64
   end
 end

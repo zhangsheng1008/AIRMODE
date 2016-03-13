@@ -17,6 +17,7 @@ class TfmSysConfig : public TForm
 {
 __published:	// IDE-managed Components
 	TDBGrid *DBGrid1;
+	TPanel *Panel1;
 	TDBNavigator *DBNavigator1;
 private:	// User declarations
 public:		// User declarations

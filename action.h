@@ -8,6 +8,7 @@
 #include "uDM.h"
 #include "util.h"
 #include <vector>
+#include <StrUtils.hpp>
 //---------------------------------------------------------------------------
 const int DS_MAX_NUM = 20;
 
@@ -36,6 +37,7 @@ class TModuleThread : public TThread
 		TADODataSet *threadDataSetPool[DS_MAX_NUM];
 		TADOConnection *dbCon[DS_MAX_NUM];
 		TADODataSet* __fastcall load(String sql);
+		String commandCode;
 		virtual void __fastcall releaseDS(TADODataSet *ds);
 		void __fastcall send();
 		int __fastcall recieve();

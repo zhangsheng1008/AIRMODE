@@ -240,7 +240,6 @@ object fmAirMode: TfmAirMode
         Height = 25
         Caption = 'Button2'
         TabOrder = 7
-        Visible = False
         OnClick = Button2Click
       end
       object chkAnalyzer: TCheckBox

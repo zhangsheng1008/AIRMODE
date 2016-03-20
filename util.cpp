@@ -11,6 +11,7 @@
 #include <StdCtrls.hpp>
 #include <sstream>
 #include <iostream>
+#include <StrUtils.hpp>
 //---------------------------------------------------------------------------
 
 #pragma package(smart_init)
@@ -20,7 +21,7 @@ const char* HEX_REGEX = "([0-9a-fA-F]{2}?)";
 const char* COMMMAND_TEMPLATE_REGEX = "(\\{\\d\\.\\d\\})|(\\{\\d\\})";
 
 
-
+//---------------------------------------------------------------------------
 
 String _fastcall paraProcess(String src, String para[]){
 	boost::regex reg(COMMMAND_TEMPLATE_REGEX);
@@ -55,6 +56,8 @@ String _fastcall paraProcess(String src, String para[]){
 
 }
 
+//---------------------------------------------------------------------------
+
 TStringList* _fastcall regexMap(String src, String regex){
 	TStringList *res = new TStringList();
 	if (regex == "" || src == "") {
@@ -78,6 +81,8 @@ TStringList* _fastcall regexMap(String src, String regex){
 
 }
 
+//---------------------------------------------------------------------------
+
 void _fastcall setFormComponentCaption(TForm *form, String prefix, String content){
 	String name;
 	int idx;
@@ -100,6 +105,8 @@ void _fastcall setFormComponentCaption(TForm *form, String prefix, String conten
 }
 
 
+//---------------------------------------------------------------------------
+
 TComponent* __fastcall getComponentByName(TForm* form, String name){
 	String compName;
 	for (int i= 0; i < form->ComponentCount - 1; i++) {
@@ -114,6 +121,8 @@ TComponent* __fastcall getComponentByName(TForm* form, String name){
    return NULL;
 }
 
+//---------------------------------------------------------------------------
+
 int convertStrToHex(string str){
 	std::stringstream ss;
 	unsigned int x;
@@ -121,7 +130,7 @@ int convertStrToHex(string str){
 	ss >> x;
 	return x;
 }
-
+//---------------------------------------------------------------------------
 
 unsigned char* convertHexCommand(String cmd, unsigned int* len){
 	boost::regex reg(HEX_REGEX);
@@ -146,7 +155,7 @@ unsigned char* convertHexCommand(String cmd, unsigned int* len){
 	}
 	return c;
 }
-
+//---------------------------------------------------------------------------
 String convertHexResult(unsigned char* buf, int len){
 	String res;
 	for (int i = 0; i < len; i++) {
@@ -155,7 +164,7 @@ String convertHexResult(unsigned char* buf, int len){
 	return res;
 }
 
-
+//---------------------------------------------------------------------------
 unsigned char* flowHexPara(float flow){
    long InitFlow = 16384;
    long FlowPara = 32768;
@@ -165,7 +174,7 @@ unsigned char* flowHexPara(float flow){
    c[1] = flowValue/(16*16);
    return c;
 }
-
+//---------------------------------------------------------------------------
 float convertFlowValue(unsigned char* buf){
    float InitFlow = 16384;
    float FlowPara = 32768;
@@ -173,7 +182,7 @@ float convertFlowValue(unsigned char* buf){
    float result = ((value - InitFlow) / FlowPara) * 100;
    return result;
 }
-
+//---------------------------------------------------------------------------
 String __fastcall sensibilityPara(String c){
 	if (c == "0") {
 	   return "57313636" ;
@@ -204,7 +213,7 @@ String __fastcall sensibilityPara(String c){
     return cmd_part1 + cmd_part2;
 }
 
-
+//---------------------------------------------------------------------------
 String __fastcall analyzePPM(unsigned char *result, int groupNum, int resultSize){
 	String strRes = "" ;
 	if (resultSize == 141) {
@@ -218,7 +227,7 @@ String __fastcall analyzePPM(unsigned char *result, int groupNum, int resultSize
 	}
 	return strRes;
 }
-
+//---------------------------------------------------------------------------
 HANDLE __fastcall openPort(String portNum, int baudRate)
 {
 	String port = "\\\\.\\COM" +  Trim(portNum);
@@ -243,7 +252,7 @@ HANDLE __fastcall openPort(String portNum, int baudRate)
 	ClearCommError(hCom,  &lpErr, &comStat);
 	return hCom;
 }
-
+//---------------------------------------------------------------------------
 void __fastcall writePort(HANDLE hCom, unsigned char *command, unsigned int len)
 {
 	DWORD lpNumberOfBytesWritten;
@@ -251,7 +260,7 @@ void __fastcall writePort(HANDLE hCom, unsigned char *command, unsigned int len)
 	WriteFile(hCom, command, len, &lpNumberOfBytesWritten, NULL);
 }
 
-
+//---------------------------------------------------------------------------
 void __fastcall readPort(HANDLE hCom, unsigned char *result, unsigned int &result_size)
 {
 	DWORD lpErr ,lpNumberOfBytesRead;
@@ -266,7 +275,7 @@ void __fastcall readPort(HANDLE hCom, unsigned char *result, unsigned int &resul
 	ReadFile(hCom, result, comStat.cbInQue, &lpNumberOfBytesRead, NULL);
 
 }
-
+//---------------------------------------------------------------------------
 void __fastcall sendCmdToComPort(String portNum,
 								 int baudRate,
 								 unsigned char *command,
@@ -281,4 +290,21 @@ void __fastcall sendCmdToComPort(String portNum,
 	}
 	readPort(hCom, result, result_size);
     CloseHandle(hCom);
+}
+
+//---------------------------------------------------------------------------
+
+String parseModNo(String modInfo){
+	unsigned int len = 0;
+	if (Trim(modInfo) == "") {
+    	return "";
+	}
+	unsigned char *res = convertHexCommand(modInfo, &len);
+	int resultNum[6] = {3,4,5,6,7,8};
+	String result_str = "";
+	for (int i = 0; i < 6; i++) {
+	   result_str = result_str + RightStr(AnsiString("0" + IntToStr(res[resultNum[i]])), 2);
+	}
+	delete res;
+	return result_str;
 }

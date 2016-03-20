@@ -78,6 +78,7 @@ void __fastcall TfmAirMode::btnRunClick(TObject *Sender)
         runMode = 1;
 	}
 
+	readModNo();
 	for (int i = 0 ; i < ports->Count; i++) {
 		PThread subThread = new TModuleThread(runId, StrToInt((*ports)[i]), StrToInt(Trim(edtInterval->Text)), runMode);
 		subThread->Start();
@@ -113,6 +114,8 @@ void __fastcall TfmAirMode::Button2Click(TObject *Sender)
 	unsigned int i;
 	unsigned char *res = convertHexCommand("0F 14 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 08 C4 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 0F 14 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 EC", &i);
 	ShowMessage(analyzePPM(res, 2, i));
+	String modInfo = "FF FA 06 14 0D 05 14 00 01 3A";
+	ShowMessage(parseModNo(modInfo));
 }
 //---------------------------------------------------------------------------
 
@@ -228,6 +231,7 @@ bool __fastcall TfmAirMode::readOtherInfo()
 	return true;
 }
 
+//---------------------------------------------------------------------------
 
 void __fastcall TfmAirMode::btnEEPromClick(TObject *Sender)
 {
@@ -317,13 +321,21 @@ void __fastcall TfmAirMode::readModNo()
 {
 	runMode = 0;
 	if (cbRunMode->Checked == true) {
-        runMode = 1;
+		runMode = 1;
 	}
-	String commandPara[2];
+	String sendCommandTpl;
+	String readCommandTpl;
+	String commandPara[3];
 	TADODataSet *modConfig = dm->query("select * from module_config ");
-	TADODataSet *cmdConfig = dm->query("select * from sys_config where code = 'READ_MODNO'");
-	String sendCommandTpl = cmdConfig->FieldByName("value_1")->AsString;
-	String resTpl = cmdConfig->FieldByName("value_2")->AsString;
+	TADODataSet *cmdConfig = dm->query("select * from sys_config where code = 'READ_MODNO_ACTIVE'");
+	String actSendComTpl = cmdConfig->FieldByName("value_1")->AsString;
+	String actReadComTpl = cmdConfig->FieldByName("value_2")->AsString;
+
+	cmdConfig->Close();
+
+	cmdConfig = dm->query("select * from sys_config where code = 'READ_MODNO_PASSIVE'");
+	String pasSendComTpl = cmdConfig->FieldByName("value_1")->AsString;
+	String pasReadComTpl = cmdConfig->FieldByName("value_2")->AsString;
 
 	cmdConfig->Close();
 	modConfig->First();
@@ -332,17 +344,29 @@ void __fastcall TfmAirMode::readModNo()
 		String addr = modConfig->FieldByName("addr")->AsString;
 		String port = modConfig->FieldByName("port")->AsString;
 		String baudRate = modConfig->FieldByName("baud_rate")->AsString;
+		bool passive = modConfig->FieldByName("passive")->AsBoolean;
 		HANDLE hCom;
 		if (runMode == 0) {
-          hCom = openPort(port, StrToInt(baudRate));
+		  hCom = openPort(port, StrToInt(baudRate));
 		}
 
+		TADODataSet *baudParaConfig = dm->query("select value_2 from sys_config where code = 'baudrate_para' and value_1 = '" + modConfig->FieldByName("command_baud_rate")->AsString + "'");
+		String baudPara =  baudParaConfig->FieldByName("value_2")->AsString;
+		baudParaConfig->Close();
 		commandPara[0] = addr;
+		sendCommandTpl = pasSendComTpl;
+		readCommandTpl = pasReadComTpl;
+		if (passive) {
+			sendCommandTpl = actSendComTpl;
+			readCommandTpl = actReadComTpl;
+		}
 
 		for (int i = 10; i < 30; i++) {
 			String iicAddr = "0" + IntToStr(i);
 			commandPara[1] = RightStr(AnsiString(iicAddr), 2);
+			commandPara[2] = baudPara;
 			String sendCommand = paraProcess(sendCommandTpl, commandPara);
+			String readCommand = paraProcess(readCommandTpl, commandPara);
 			String result_str;
             String res = "";
 
@@ -351,24 +375,27 @@ void __fastcall TfmAirMode::readModNo()
 				unsigned char* command = convertHexCommand(sendCommand, &len);
 				writePort(hCom, command, len);
 				delete command;
-				Sleep(StrToInt(edtInterval->Text) * 1000);
-
-
+				Sleep(1000);
+                command = convertHexCommand(readCommand, &len);
+				writePort(hCom, command, len);
+				delete command;
+				Sleep(1000);
 				unsigned char result[4096];
 				unsigned int result_size;
 				readPort(hCom, result, result_size);
-				for (unsigned int i = 0;i < result_size && result_size <= 4096; i++) {
-				   result_str = result_str + (char)(result[i]);
+				if (passive == false) {
+                	result_str = convertHexResult(result, result_size);
+				} else {
+					for (unsigned int i = 0;i < result_size && result_size <= 4096; i++) {
+					   result_str = result_str + (char)(result[i]);
+					}
 				}
-				TStrings *s = regexMap(result_str, resTpl);
-				for (int c = 0; c < s->Count; c++) {
-				   res = res + (*s)[c] + "  ";
-				}
+
 			}
 			dm->tbModNo->Append();
 			dm->tbModNo->FieldByName("addr")->AsString = commandPara[0] + "," + commandPara[1];
 			dm->tbModNo->FieldByName("log_id")->AsInteger = runId;
-			dm->tbModNo->FieldByName("mod_no")->AsString = res;
+			dm->tbModNo->FieldByName("mod_no")->AsString = parseModNo(result_str);
 			dm->tbModNo->FieldByName("command")->AsString = sendCommand;
 			dm->tbModNo->FieldByName("return_info")->AsString = result_str;
 			dm->tbModNo->Post();
@@ -382,7 +409,7 @@ void __fastcall TfmAirMode::readModNo()
 
 }
 
-
+//---------------------------------------------------------------------------
 
 void __fastcall TfmAirMode::tabResultChange(TObject *Sender)
 {

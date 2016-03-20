@@ -67,6 +67,7 @@ void __fastcall Tdm::DataModuleCreate(TObject *Sender)
 	execLog->Active = true;
 	tbEEProm->Active = true;
 	tbAnalyzer->Active = true;
+	tbModNo->Active = true;
 }
 //---------------------------------------------------------------------------
 

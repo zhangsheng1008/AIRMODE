@@ -46,4 +46,6 @@ void __fastcall sendCmdToComPort(String portNum,
 								 unsigned int command_size,
 								 unsigned char *result,
 								 unsigned int &result_size);
+
+String parseModNo(String modInfo);
 #endif
